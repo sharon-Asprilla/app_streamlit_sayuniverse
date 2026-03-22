@@ -1,4 +1,17 @@
 import streamlit as st
+from datetime import date
+import pandas as pd
+
+
+
+
+# Inicializar historial en sesión
+if "historial" not in st.session_state:
+    st.session_state.historial = []
+
+# Función para registrar procesos en historial
+def registrar_proceso(mensaje):
+    st.session_state.historial.append(f"{mensaje} ({date.today().strftime('%d/%m/%Y')})")
 
 # Estilos personalizados
 st.markdown("""
@@ -53,24 +66,48 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+st.markdown("""
+    <style>
+        [data-testid="stSidebar"] {display: none;}
+    </style>
+""", unsafe_allow_html=True)
+
+
+if st.session_state.get("logged_in"):
+    st.switch_page("pages/cursos.py")
+    st.stop() 
+
 # Contenedor de login
 st.markdown("<div class='login-box'>", unsafe_allow_html=True)
 st.markdown("<div class='icon'>🖂</div>", unsafe_allow_html=True)
 st.markdown("<div class='login-title'>Sign In</div>", unsafe_allow_html=True)
 
 # Campos de entrada
-usuario = st.text_input("Username", placeholder="Enter your email")
-password = st.text_input("Password", type="password", placeholder="Enter your password")
+usuario = st.text_input("Nombre", placeholder="Ingresa tu correo")
+password = st.text_input("Password", type="password", placeholder="contraseña")
+
+
+
+import os
+
+print(os.listdir("pages"))
+
 
 # Botón de login
-if st.button("LOGIN", use_container_width=True):
-    st.success("Inicio de sesión exitoso")
+if st.button("Entrar") and usuario:
+   st.switch_page("pages/cursos.py")
+if usuario and password:
+     st.session_state.autenticado = True
+     st.session_state.usuario = usuario
+     st.success("Inicio de sesión exitoso")
+     registrar_proceso("Inicio de sesión exitoso")
 
-# Footer
-st.markdown("<div class='login-footer'>Recordarme | ¿Olvidaste tu contraseña?</div>", unsafe_allow_html=True)
+   
 
-# Botón de registro
-if st.button("Registrarse", use_container_width=True):
+
+else:
+    st.chat_message("Ingresa tu nombre y contraseña")
+    st.button("Registrarse", use_container_width=True)
     st.markdown("""
         <div style='text-align:center; margin-top:20px;'>
             <h4 style='color:white;'>Elige cómo registrarte</h4>
@@ -84,3 +121,14 @@ if st.button("Registrarse", use_container_width=True):
     """, unsafe_allow_html=True)
 
 st.markdown("</div>", unsafe_allow_html=True)
+
+pg = st.navigation([st.Page("pages/cursos.py"), st.Page("pages/🔖Certificados.py"),st.Page("pages/⚠️alerts.py"),st.Page("pages/📚dashboard.py"),st.Page("pages/salir.py")])
+pg.run()
+
+
+
+
+
+
+
+
