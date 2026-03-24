@@ -323,6 +323,42 @@ if archivo is not None:
             sms_mensaje = f"📄 Entregaste una actividad: {archivo.name}"
             enviar_sms(sms_mensaje)
 
+# --- PROGRESO GENERAL DEL ESTUDIANTE ---
+st.markdown("---")
+st.subheader("📊 Tu Progreso Global")
+
+try:
+    conn = sqlite3.connect("academia.db")
+    c = conn.cursor()
+    
+    # 1. Calcular Total de Cursos
+    # Intentamos contar desde la tabla 'cursos'. Si no existe o está vacía, asumimos 9 (3 niveles x 3 cursos)
+    try:
+        c.execute("SELECT COUNT(*) FROM cursos")
+        total_db = c.fetchone()[0]
+        total_cursos = total_db if total_db > 0 else 9
+    except sqlite3.OperationalError:
+        total_cursos = 9 # Fallback si la tabla cursos no está creada aún
+    
+    # 2. Calcular Cursos Aprobados (Nota 5.0/5.0)
+    user_id = st.session_state.user_info['id']
+    c.execute("SELECT COUNT(DISTINCT titulo) FROM notas WHERE usuario_id=? AND tipo='Curso' AND nota='5.0/5.0'", (user_id,))
+    aprobados = c.fetchone()[0]
+    
+    conn.close()
+    
+    # 3. Mostrar Barra
+    progreso = min(aprobados / total_cursos, 1.0) # Asegurar que no pase de 100%
+    st.progress(progreso)
+    st.write(f"Has completado **{aprobados}** de **{total_cursos}** cursos disponibles ({int(progreso * 100)}%).")
+    
+    if progreso == 1.0:
+        st.balloons()
+        st.success("¡Felicidades! Has completado todo el plan de estudios.")
+
+except Exception as e:
+    st.error(f"Error calculando progreso: {e}")
+
 # Historial de procesos
 st.markdown("---")
 st.subheader("📂 Historial de Movimientos")
