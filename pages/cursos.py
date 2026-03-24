@@ -1,5 +1,6 @@
 import streamlit as st
 from datetime import date
+import sqlite3
 
 # --- Authentication Check ---
 # This must be at the top of every page in the `pages` directory
@@ -17,10 +18,6 @@ st.markdown("<h1 style='text-align: center;'>🦋sayuniverse🦋</h1>", unsafe_a
 
 
 st.title("Cursos")
-
-ando# Inicializar estado de navegación de cursos si no existe
-if "curso_activo" not in st.session_state:
-    st.session_state.curso_activo = None
 
 
 
@@ -225,6 +222,19 @@ def mostrar_leccion(curso, nivel):
                 st.session_state[f"aprobado_{curso['nombre']}"] = True
                 st.session_state[f"nivel_{curso['nombre']}"] = nivel
                 st.session_state[f"duracion_{curso['nombre']}"] = f"{curso['clases']} horas"
+                
+                # --- GUARDAR NOTA DE CURSO EN BASE DE DATOS ---
+                try:
+                    conn = sqlite3.connect("academia.db")
+                    c = conn.cursor()
+                    # Guardar nota del curso (5.0/5.0)
+                    c.execute("INSERT INTO notas (usuario_id, tipo, titulo, nota, fecha) VALUES (?, ?, ?, ?, ?)",
+                              (st.session_state.user_info['id'], "Curso", curso['nombre'], "5.0/5.0", str(date.today())))
+                    conn.commit()
+                    conn.close()
+                except Exception as e:
+                    st.error(f"Error guardando progreso: {e}")
+                
                 if st.button("Terminar Intento", key=f"terminar_{curso['nombre']}"):
                     st.session_state[f"completado_{curso['nombre']}"] = True
                     st.rerun()
@@ -245,6 +255,9 @@ def mostrar_leccion(curso, nivel):
 # Estilos personalizados
 st.markdown("""
     <style>
+    * {
+        font-family: 'Arial', sans-serif !important;
+    }
     .titulo {
         text-align: center;
         font-size: 36px;
@@ -277,6 +290,21 @@ st.markdown("""
         font-size: 14px;
         color: #555;
         margin-top: 5px;
+    }
+    </style>
+    <style>
+    .footer {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        background-color: #f1f1f1;
+        color: black;
+        text-align: center;
+        padding: 10px;
+        font-size: 14px;
+        z-index: 100;
+        border-top: 2px solid #E67E22;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -313,3 +341,10 @@ for nivel, lista in cursos.items():
             if st.button(f"Empezar {curso['nombre']}", key=curso['nombre']):
                 registrar_proceso(f"Empezó el curso: {curso['nombre']}")
                 mostrar_leccion(curso, nivel)
+
+# Footer Global
+st.markdown("""
+<div class="footer">
+    <p>🦋 SayUniverse | Desarrollada por <b>Sharon Asprilla</b></p>
+</div>
+""", unsafe_allow_html=True)

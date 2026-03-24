@@ -1,5 +1,12 @@
 import streamlit as st
 from datetime import date
+import sqlite3
+
+try:
+    from fpdf import FPDF
+except ImportError:
+    st.error("Librería 'fpdf' no encontrada. Instálala con: pip install fpdf")
+    st.stop()
 
 # --- Authentication Check ---
 if not st.session_state.get("logged_in", False):
@@ -18,18 +25,95 @@ if "historial" not in st.session_state:
 # Función para registrar procesos en historial
 def registrar_proceso(mensaje):
     st.session_state.historial.append(f"{mensaje} ({date.today().strftime('%d/%m/%Y')})")
+    # --- GUARDAR EN BASE DE DATOS ---
+    if st.session_state.get("logged_in"):
+        try:
+            conn = sqlite3.connect("academia.db")
+            c = conn.cursor()
+            c.execute("INSERT INTO historial (usuario_id, accion, fecha) VALUES (?, ?, ?)",
+                      (st.session_state.user_info['id'], mensaje, str(date.today())))
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"Error guardando historial: {e}")
+
+# Función para generar el PDF
+def generar_pdf(nombre, curso, nivel, duracion, fecha_inicio, fecha_fin):
+    pdf = FPDF(orientation='L', unit='mm', format='A4')
+    pdf.add_page()
+    
+    # Marco decorativo naranja
+    pdf.set_line_width(2)
+    pdf.set_draw_color(230, 126, 34) # Naranja SayUniverse
+    pdf.rect(10, 10, 277, 190)
+    
+    # Títulos
+    pdf.set_font("Arial", 'B', 40)
+    pdf.set_text_color(230, 126, 34)
+    pdf.set_y(40)
+    pdf.cell(0, 15, "CERTIFICADO", 0, 1, 'C')
+    
+    pdf.set_font("Arial", '', 16)
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(0, 15, "DE FINALIZACIÓN", 0, 1, 'C')
+    
+    # Cuerpo
+    pdf.ln(10)
+    pdf.set_font("Arial", '', 14)
+    pdf.cell(0, 10, "SayUniverse certifica que:", 0, 1, 'C')
+    
+    pdf.ln(5)
+    pdf.set_font("Arial", 'BI', 30)
+    pdf.set_text_color(44, 62, 80)
+    pdf.cell(0, 15, nombre, 0, 1, 'C')
+    
+    pdf.ln(10)
+    pdf.set_font("Arial", '', 14)
+    pdf.set_text_color(100, 100, 100)
+    pdf.cell(0, 10, "Ha completado satisfactoriamente el curso:", 0, 1, 'C')
+    
+    pdf.set_font("Arial", 'B', 24)
+    pdf.set_text_color(230, 126, 34)
+    pdf.cell(0, 15, curso, 0, 1, 'C')
+    
+    # Detalles y Fechas
+    pdf.ln(5)
+    pdf.set_font("Arial", '', 12)
+    pdf.set_text_color(50, 50, 50)
+    pdf.cell(0, 10, f"Nivel: {nivel}  |  Duración: {duracion}", 0, 1, 'C')
+    
+    # Fechas de inicio y fin
+    pdf.ln(5)
+    pdf.set_font("Arial", 'I', 11)
+    pdf.cell(0, 10, f"Fecha de Inicio: {fecha_inicio}   -   Fecha de Finalización: {fecha_fin}", 0, 1, 'C')
+    
+    # Firmas
+    pdf.set_y(-50)
+    pdf.set_draw_color(0, 0, 0)
+    pdf.set_line_width(0.5)
+    
+    y = pdf.get_y()
+    pdf.line(60, y, 110, y)
+    pdf.line(180, y, 230, y)
+    
+    pdf.ln(2)
+    pdf.set_font("Arial", '', 10)
+    pdf.cell(135, 5, "Firma del Instructor", 0, 0, 'C')
+    pdf.cell(60, 5, "Director SayUniverse", 0, 1, 'C')
+    
+    return pdf.output(dest='S').encode('latin-1')
 
 # Lista completa de cursos posibles (debe coincidir con cursos.py)
 cursos_disponibles = [
-    {"nombre": "Inglés Básico 1", "clases": 10},
-    {"nombre": "Inglés Básico 2", "clases": 12},
-    {"nombre": "Inglés Básico 3", "clases": 15},
-    {"nombre": "Inglés Intermedio 1", "clases": 14},
-    {"nombre": "Inglés Intermedio 2", "clases": 16},
-    {"nombre": "Inglés Intermedio 3", "clases": 18},
-    {"nombre": "Inglés Avanzado 1", "clases": 20},
-    {"nombre": "Inglés Avanzado 2", "clases": 22},
-    {"nombre": "Inglés Avanzado 3", "clases": 25},
+    {"nombre": "Inglés Básico 1", "clases": 10, "nivel": "Básico"},
+    {"nombre": "Inglés Básico 2", "clases": 12, "nivel": "Básico"},
+    {"nombre": "Inglés Básico 3", "clases": 15, "nivel": "Básico"},
+    {"nombre": "Inglés Intermedio 1", "clases": 14, "nivel": "Intermedio"},
+    {"nombre": "Inglés Intermedio 2", "clases": 16, "nivel": "Intermedio"},
+    {"nombre": "Inglés Intermedio 3", "clases": 18, "nivel": "Intermedio"},
+    {"nombre": "Inglés Avanzado 1", "clases": 20, "nivel": "Avanzado"},
+    {"nombre": "Inglés Avanzado 2", "clases": 22, "nivel": "Avanzado"},
+    {"nombre": "Inglés Avanzado 3", "clases": 25, "nivel": "Avanzado"},
 ]
 
 st.title("🎓 Certificados de Cursos")
@@ -39,10 +123,46 @@ st.markdown("""
     [data-testid="stSidebar"] {
         background-color: #E67E22;
     }
+    /* Fuente Arial Global */
+    * {
+        font-family: 'Arial', sans-serif !important;
+    }
+    .footer {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        background-color: #f1f1f1;
+        color: black;
+        text-align: center;
+        padding: 10px;
+        font-size: 14px;
+        z-index: 100;
+        border-top: 2px solid #E67E22;
+    }
     </style>
 """, unsafe_allow_html=True)
 
 # Verificar usuario y pruebas completadas
+# --- SINCRONIZAR CON BASE DE DATOS ---
+if st.session_state.get('logged_in'):
+    try:
+        conn = sqlite3.connect("academia.db")
+        c = conn.cursor()
+        user_id = st.session_state.user_info['id']
+        # Buscar cursos completados en la BD
+        c.execute("SELECT titulo FROM notas WHERE usuario_id = ? AND tipo = 'Curso'", (user_id,))
+        db_aprobados = [row[0] for row in c.fetchall()]
+        conn.close()
+        
+        # Actualizar la sesión para que el código de abajo los detecte
+        for curso_nombre in db_aprobados:
+            st.session_state[f"aprobado_{curso_nombre}"] = True
+            st.session_state[f"completado_{curso_nombre}"] = True
+    except Exception as e:
+        st.error(f"Error sincronizando base de datos: {e}")
+# -------------------------------------
+
 if not st.session_state.get('logged_in'):
     st.warning("Debes iniciar sesión para ver tus certificados.")
 else:
@@ -54,33 +174,35 @@ else:
         
         # Verificar si el curso fue aprobado y completado en la sesión
         if st.session_state.get(key_aprobado) and st.session_state.get(f"completado_{curso['nombre']}"):
-            nivel = st.session_state.get(f"nivel_{curso['nombre']}", "Desconocido")
+            # Intentar obtener nivel de la sesión, si no, usar el de la lista
+            nivel = st.session_state.get(f"nivel_{curso['nombre']}", curso.get("nivel", "Nivel Completado"))
             duracion = st.session_state.get(f"duracion_{curso['nombre']}", f"{curso['clases']} horas")
             certificado_generado = True
             
             certificado_html = f"""
-            <div style='background: radial-gradient(circle, #000000 0%, #0d0d0d 60%, #000000 100%); padding: 30px; border-radius: 20px; color: white; font-family: Arial, sans-serif; max-width: 850px; margin:auto; border: 2px solid gold;'>
-                <div style='text-align:center; padding: 15px; color: #f3d86b;'>
-                    <h1 style='margin:0; font-size: 56px; font-weight: 900;'>CERTIFICADO</h1>
-                    <p style='font-size: 20px; margin-top: 5px;'>DE RECONOCIMIENTO</p>
+            <div style='background: white; padding: 40px; border-radius: 10px; color: #333; font-family: "Georgia", serif; max-width: 800px; margin:auto; border: 10px solid #E67E22; text-align: center; box-shadow: 0 0 20px rgba(0,0,0,0.2);'>
+                <div style='border-bottom: 2px solid #E67E22; padding-bottom: 20px; margin-bottom: 30px;'>
+                    <h1 style='margin:0; font-size: 48px; color: #E67E22; text-transform: uppercase; letter-spacing: 5px;'>Certificado</h1>
+                    <p style='font-size: 18px; color: #555; text-transform: uppercase; letter-spacing: 2px; margin-top: 10px;'>De Finalización</p>
                 </div>
-                <div style='margin-top: 20px;'>
-                    <p style='color:#cccccc; font-size: 18px;'>SayUniverse certifica que</p>
-                    <h2 style='margin: 0; font-size: 44px; color: #ffffff;'>{nombre_alumno}</h2>
-                    <p style='color:#f3d86b; font-size: 18px;'>ha completado satisfactoriamente el curso</p>
-                    <h3 style='margin: 5px 0 15px 0; font-size: 30px; color:#ffffff;'>{curso['nombre']}</h3>
-                    <p style='color:#ffffff; font-size: 16px;'>Nivel de certificación: <strong>{nivel}</strong></p>
-                    <p style='color:#ffffff; font-size: 16px;'>Duración de la formación: <strong>{duracion}</strong></p>
-                    <p style='color:#ffffff; font-size: 16px;'>Fecha: <strong>{date.today().strftime('%d/%m/%Y')}</strong></p>
+                
+                <div style='padding: 20px 0;'>
+                    <p style='font-size: 20px; color: #555;'>Este documento certifica que</p>
+                    <h2 style='font-size: 42px; color: #2C3E50; margin: 20px 0; font-style: italic;'>{nombre_alumno}</h2>
+                    <p style='font-size: 20px; color: #555;'>Ha completado y aprobado satisfactoriamente el curso de:</p>
+                    <h3 style='font-size: 32px; color: #E67E22; margin: 20px 0;'>{curso['nombre']}</h3>
+                    <p style='font-size: 18px; color: #777;'>Nivel: <strong>{nivel}</strong> &nbsp;|&nbsp; Intensidad: <strong>{duracion}</strong></p>
+                    <p style='font-size: 16px; color: #999; margin-top: 30px;'>Expedido el día: {date.today().strftime('%d de %B de %Y')}</p>
                 </div>
-                <div style='margin-top: 30px; display:flex; justify-content:space-between;'>
+                
+                <div style='margin-top: 50px; display:flex; justify-content:space-around;'>
                     <div style='text-align:center;'>
-                        <p style='color:#ffffff; margin-bottom:60px;'>______________________</p>
-                        <p style='color:#ffffff;'>Firma</p>
+                        <div style='border-bottom: 1px solid #333; width: 200px; margin: 0 auto 10px auto;'></div>
+                        <p style='font-weight: bold; color: #333;'>Firma del Instructor</p>
                     </div>
                     <div style='text-align:center;'>
-                        <p style='color:#ffffff; margin-bottom:60px;'>______________________</p>
-                        <p style='color:#ffffff;'>Director SayUniverse</p>
+                        <div style='border-bottom: 1px solid #333; width: 200px; margin: 0 auto 10px auto;'></div>
+                        <p style='font-weight: bold; color: #333;'>Director SayUniverse</p>
                     </div>
                 </div>
             </div>
@@ -102,3 +224,10 @@ st.markdown("---")
 st.subheader("📂 Certificados guardados en tu sesión")
 for nombre, contenido in st.session_state.certificados.items():
     st.text(f"- {nombre}")
+
+# Footer Global
+st.markdown("""
+<div class="footer">
+    <p>🦋 SayUniverse | Desarrollada por <b>Sharon Asprilla</b></p>
+</div>
+""", unsafe_allow_html=True)

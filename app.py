@@ -7,6 +7,24 @@ from datetime import date
 # --- Database Functions ---
 def init_db():
     conn = sqlite3.connect("academia.db")
+    c = conn.cursor()
+    # Crear tabla de notas si no existe
+    c.execute("""CREATE TABLE IF NOT EXISTS notas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        usuario_id INTEGER,
+        tipo TEXT,
+        titulo TEXT,
+        nota TEXT,
+        fecha TEXT
+    )""")
+    # Crear tabla de historial si no existe
+    c.execute("""CREATE TABLE IF NOT EXISTS historial (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        usuario_id INTEGER,
+        accion TEXT,
+        fecha TEXT
+    )""")
+    conn.commit()
     return conn
 
 def check_user(conn, email):
@@ -57,15 +75,18 @@ st.markdown("""
     /* Add your custom CSS from login.py here */
     body {
         background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+        color: white;
+        font-family: 'Arial', sans-serif !important;
+    }
+    /* Forzar Arial en todos los componentes */
+    .stMarkdown, .stButton, .stTextInput, p, h1, h2, h3 {
+        font-family: 'Arial', sans-serif !important;
     }
     .login-box {
-        background-color: rgba(255, 255, 255, 0.1);
-        padding: 40px;
-        border-radius: 20px;
-        width: 400px;
+        width: 100%;
+        max-width: 420px;
         margin: auto;
-        margin-top: 50px;
-        box-shadow: 0 0 20px rgba(0,0,0,0.3);
+        margin-top: 30px;
         text-align: center;
     }
     .login-title {
@@ -73,6 +94,18 @@ st.markdown("""
         color: white;
         margin-bottom: 20px;
         font-weight: bold;
+    }
+    .logo-container {
+        font-size: 60px;
+        font-weight: bold;
+        background: -webkit-linear-gradient(#F39C12, #E67E22);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 10px;
+    }
+    /* Estilos para los tabs */
+    .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
+        font-size: 16px;
     }
     /* Hide sidebar for login page */
     [data-testid="stSidebar"] {
@@ -82,11 +115,25 @@ st.markdown("""
         gap: 10px;
         justify-content: center;
     }
+    .footer {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        background-color: #0f2027;
+        color: white;
+        text-align: center;
+        padding: 10px;
+        font-size: 14px;
+        z-index: 100;
+        border-top: 1px solid #E67E22;
+    }
     </style>
 """, unsafe_allow_html=True)
 
 st.markdown("<div class='login-box'>", unsafe_allow_html=True)
-st.markdown("<div class='login-title'>Bienvenido a SayUniverse</div>", unsafe_allow_html=True)
+st.markdown("<div class='logo-container'>🦋 SayUniverse</div>", unsafe_allow_html=True)
+st.markdown("<div class='login-title'>Plataforma Académica</div>", unsafe_allow_html=True)
 
 conn = init_db()
 
@@ -144,3 +191,10 @@ with tab_register:
 st.markdown("</div>", unsafe_allow_html=True)
 
 conn.close()
+
+# Footer Global
+st.markdown("""
+<div class="footer">
+    <p>🦋 SayUniverse | Desarrollada por <b>Sharon Asprilla</b></p>
+</div>
+""", unsafe_allow_html=True)

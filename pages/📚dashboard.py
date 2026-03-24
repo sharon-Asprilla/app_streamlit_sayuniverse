@@ -1,5 +1,7 @@
 import streamlit as st
 from datetime import date
+import sqlite3
+import pandas as pd
 
 # --- Authentication Check ---
 if not st.session_state.get("logged_in", False):
@@ -23,11 +25,31 @@ st.markdown("""
         -moz-user-select: none;
         -ms-user-select: none;
     }
+    [data-testid="stSidebar"] {
+        background-color: #E67E22;
+    }
     .stMarkdown, .stRadio, .stExpander {
         user-select: none;
         -webkit-user-select: none;
         -moz-user-select: none;
         -ms-user-select: none;
+    }
+    /* Fuente Arial Global */
+    * {
+        font-family: 'Arial', sans-serif !important;
+    }
+    .footer {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        background-color: #f1f1f1;
+        color: black;
+        text-align: center;
+        padding: 10px;
+        font-size: 14px;
+        z-index: 100;
+        border-top: 2px solid #E67E22;
     }
 </style>
 <script>
@@ -80,6 +102,17 @@ if "historial" not in st.session_state:
 # Función para registrar procesos en historial
 def registrar_proceso(mensaje):
     st.session_state.historial.append(f"{mensaje} ({date.today().strftime('%d/%m/%Y')})")
+    # --- GUARDAR EN BASE DE DATOS ---
+    if st.session_state.get("logged_in"):
+        try:
+            conn = sqlite3.connect("academia.db")
+            c = conn.cursor()
+            c.execute("INSERT INTO historial (usuario_id, accion, fecha) VALUES (?, ?, ?)",
+                      (st.session_state.user_info['id'], mensaje, str(date.today())))
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"Error guardando historial: {e}")
 
 # Definir preguntas para cada nivel
 preguntas_basico = [
@@ -212,6 +245,20 @@ if "presentar_prueba" in st.session_state and st.session_state.presentar_prueba:
             mensaje_registro = f"Prueba de {st.session_state.materia_seleccionada} nivel {st.session_state.nivel_seleccionado} completada con promedio {promedio:.2f}"
             registrar_proceso(mensaje_registro)
             
+            # --- GUARDAR EN BASE DE DATOS ---
+            try:
+                conn = sqlite3.connect("academia.db")
+                c = conn.cursor()
+                user_id = st.session_state.user_info['id']
+                c.execute("INSERT INTO notas (usuario_id, tipo, titulo, nota, fecha) VALUES (?, ?, ?, ?, ?)",
+                          (user_id, "Prueba", f"{st.session_state.materia_seleccionada} - {st.session_state.nivel_seleccionado}", f"{promedio:.2f}/4", str(date.today())))
+                conn.commit()
+                conn.close()
+                st.toast("✅ Calificación guardada en tu panel de Notas.")
+            except Exception as e:
+                st.error(f"Error al guardar nota: {e}")
+            # --------------------------------
+            
             # 📱 ENVÍO AUTOMÁTICO DE SMS (sin botón)
             if SMS_DISPONIBLE:
                 sms_mensaje = f"📊 Completaste una prueba de {st.session_state.materia_seleccionada} ({st.session_state.nivel_seleccionado}) con promedio {promedio:.2f}/4."
@@ -231,6 +278,20 @@ if archivo is not None:
         mensaje_registro = f"Activity submitted: {archivo.name}"
         registrar_proceso(mensaje_registro)
         
+        # --- GUARDAR EN BASE DE DATOS ---
+        try:
+            conn = sqlite3.connect("academia.db")
+            c = conn.cursor()
+            user_id = st.session_state.user_info['id']
+            c.execute("INSERT INTO notas (usuario_id, tipo, titulo, nota, fecha) VALUES (?, ?, ?, ?, ?)",
+                      (user_id, "Actividad", archivo.name, "Entregado", str(date.today())))
+            conn.commit()
+            conn.close()
+            st.toast("✅ Entrega registrada en tu panel de Notas.")
+        except Exception as e:
+            st.error(f"Error al guardar actividad: {e}")
+        # --------------------------------
+        
         # 📱 ENVÍO AUTOMÁTICO DE SMS (sin botón)
         if SMS_DISPONIBLE:
             sms_mensaje = f"📄 Entregaste una actividad: {archivo.name}"
@@ -238,13 +299,27 @@ if archivo is not None:
 
 # Historial de procesos
 st.markdown("---")
-st.subheader("📂 Process History")
-if st.session_state.historial:
-    for proceso in st.session_state.historial:
-        st.write(f"- {proceso}")
-else:
-    st.info("No process history yet")
+st.subheader("📂 Historial de Movimientos")
 
+# Cargar historial desde la base de datos
+try:
+    conn = sqlite3.connect("academia.db")
+    user_id = st.session_state.user_info['id']
+    df_hist = pd.read_sql(f"SELECT fecha, accion FROM historial WHERE usuario_id={user_id} ORDER BY id DESC LIMIT 20", conn)
+    conn.close()
+    
+    if not df_hist.empty:
+        for index, row in df_hist.iterrows():
+            st.text(f"📅 {row['fecha']} - {row['accion']}")
+    else:
+        st.info("No hay movimientos registrados aún.")
+except Exception as e:
+    st.error(f"Error cargando historial: {e}")
 
-
+# Footer Global
+st.markdown("""
+<div class="footer">
+    <p>🦋 SayUniverse | Desarrollada por <b>Sharon Asprilla</b></p>
+</div>
+""", unsafe_allow_html=True)
     
