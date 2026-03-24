@@ -25,6 +25,20 @@ st.markdown("""
         -moz-user-select: none;
         -ms-user-select: none;
     }
+    @keyframes gradient-animation {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    .stApp {
+        background: linear-gradient(-45deg, #FFFFFF, #FFEDD5, #E67E22, #FFF7E6);
+        background-size: 400% 400%;
+        animation: gradient-animation 15s ease infinite;
+    }
+    /* Texto negro global */
+    body, .stMarkdown, .stButton, .stTextInput, p, h1, h2, h3, h4, h5, h6, span, div, label, .stRadio div {
+        color: black !important;
+    }
     [data-testid="stSidebar"] {
         background-color: #E67E22;
     }
@@ -33,6 +47,16 @@ st.markdown("""
         -webkit-user-select: none;
         -moz-user-select: none;
         -ms-user-select: none;
+    }
+    /* Botón de navegación (Sidebar toggle) ROJO Y GRANDE */
+    [data-testid="collapsedControl"] {
+        transform: scale(1.5) !important;
+        background-color: #FF0000 !important;
+        color: white !important;
+        border-radius: 50%;
+        border: 2px solid white;
+        margin-left: 10px;
+        margin-top: 5px;
     }
     /* Fuente Arial Global */
     * {
@@ -43,7 +67,7 @@ st.markdown("""
         left: 0;
         bottom: 0;
         width: 100%;
-        background-color: #f1f1f1;
+        background: #FFFFFF;
         color: black;
         text-align: center;
         padding: 10px;
@@ -234,7 +258,7 @@ if "presentar_prueba" in st.session_state and st.session_state.presentar_prueba:
         respuestas = []
         for i, q in enumerate(preguntas, 1):
             with st.expander(f"{i}. {q['pregunta']}"):
-                respuesta = st.radio(f"Selecciona tu respuesta", q['opciones'], key=f"q{i}")
+                respuesta = st.radio(f"Selecciona tu respuesta", q['opciones'], key=f"q{i}_{st.session_state.materia_seleccionada}_{st.session_state.nivel_seleccionado}")
                 idx = q['opciones'].index(respuesta)
                 respuestas.append(q['puntuaciones'][idx])
         
@@ -243,9 +267,11 @@ if "presentar_prueba" in st.session_state and st.session_state.presentar_prueba:
             promedio = sum(respuestas) / len(respuestas)
             st.success(f"Prueba completada. Tu promedio es: {promedio:.2f}/4")
             mensaje_registro = f"Prueba de {st.session_state.materia_seleccionada} nivel {st.session_state.nivel_seleccionado} completada con promedio {promedio:.2f}"
+            
+            # 1. Guardar en Historial de Movimientos
             registrar_proceso(mensaje_registro)
             
-            # --- GUARDAR EN BASE DE DATOS ---
+            # 2. Guardar en Notas (Base de Datos)
             try:
                 conn = sqlite3.connect("academia.db")
                 c = conn.cursor()

@@ -24,8 +24,25 @@ def init_db():
         accion TEXT,
         fecha TEXT
     )""")
+    # Crear tabla de comunidad (chat/apuntes)
+    c.execute("""CREATE TABLE IF NOT EXISTS comunidad (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        usuario_id INTEGER,
+        usuario_nombre TEXT,
+        mensaje TEXT,
+        fecha TEXT
+    )""")
     conn.commit()
     return conn
+
+# Función auxiliar para registrar historial desde app.py
+def log_history(conn, user_id, accion):
+    try:
+        c = conn.cursor()
+        c.execute("INSERT INTO historial (usuario_id, accion, fecha) VALUES (?, ?, ?)", (user_id, accion, str(date.today())))
+        conn.commit()
+    except Exception as e:
+        print(f"Error log historia: {e}")
 
 def check_user(conn, email):
     df = pd.read_sql(f"SELECT * FROM usuarios WHERE correo='{email}'", conn)
@@ -73,14 +90,41 @@ if st.session_state.logged_in:
 st.markdown("""
     <style>
     /* Add your custom CSS from login.py here */
-    body {
-        background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
-        color: white;
+    @keyframes gradient-animation {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    .stApp {
+        background: linear-gradient(-45deg, #FFFFFF, #FFEDD5, #E67E22, #FFF7E6);
+        background-size: 400% 400%;
+        animation: gradient-animation 15s ease infinite;
+    }
+    /* Texto negro global */
+    body, .stMarkdown, .stButton, .stTextInput, p, h1, h2, h3, h4, h5, h6, span, div, label {
+        color: black !important;
         font-family: 'Arial', sans-serif !important;
     }
     /* Forzar Arial en todos los componentes */
     .stMarkdown, .stButton, .stTextInput, p, h1, h2, h3 {
         font-family: 'Arial', sans-serif !important;
+    }
+    /* Inputs Modernos */
+    .stTextInput input {
+        border-radius: 10px;
+        border: 2px solid #E67E22;
+        background-color: #FFFFFF;
+        color: black;
+    }
+    .stButton button {
+        background: linear-gradient(90deg, #E67E22, #D35400);
+        border: none;
+        border-radius: 25px;
+        transition: transform 0.2s;
+        color: white !important; /* Texto del botón blanco para contraste */
+    }
+    .stButton button:hover {
+        transform: scale(1.05);
     }
     .login-box {
         width: 100%;
@@ -91,7 +135,7 @@ st.markdown("""
     }
     .login-title {
         font-size: 22px;
-        color: white;
+        color: black;
         margin-bottom: 20px;
         font-weight: bold;
     }
@@ -106,6 +150,7 @@ st.markdown("""
     /* Estilos para los tabs */
     .stTabs [data-baseweb="tab-list"] button [data-testid="stMarkdownContainer"] p {
         font-size: 16px;
+        color: black !important;
     }
     /* Hide sidebar for login page */
     [data-testid="stSidebar"] {
@@ -120,8 +165,8 @@ st.markdown("""
         left: 0;
         bottom: 0;
         width: 100%;
-        background-color: #0f2027;
-        color: white;
+        background: #FFFFFF;
+        color: black;
         text-align: center;
         padding: 10px;
         font-size: 14px;
@@ -151,6 +196,8 @@ with tab_login:
             if user_data['password'] == password:
                 st.session_state.logged_in = True
                 st.session_state.user_info = user_data
+                # Registrar en historial
+                log_history(conn, user_data['id'], "Inicio de sesión exitoso")
                 st.switch_page("pages/cursos.py")
             else:
                 st.error("Contraseña incorrecta.")
@@ -181,6 +228,7 @@ with tab_register:
                 st.success("¡Cuenta creada! Ingresando...")
                 st.session_state.logged_in = True
                 st.session_state.user_info = get_user(conn, reg_email)
+                log_history(conn, st.session_state.user_info['id'], "Registro de cuenta nuevo")
                 st.switch_page("pages/cursos.py")
             else:
                 st.error("El correo ya está registrado.")

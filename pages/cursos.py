@@ -202,6 +202,28 @@ def mostrar_leccion(curso, nivel):
         if st.button("Verificar Respuestas", key=f"verificar_{curso['nombre']}"):
             st.session_state[f"submitted_{curso['nombre']}"] = True
             st.session_state[f"presentado_{curso['nombre']}"] = True
+            
+            # --- CALCULAR Y GUARDAR NOTA (0 a 5) ---
+            try:
+                # Calcular nota actual
+                correctas_calc = 0
+                key_respuestas = f"respuestas_{curso['nombre']}"
+                for i, p in enumerate(leccion['preguntas']):
+                    if st.session_state[key_respuestas][i] == p['correcta']:
+                        correctas_calc += 1
+                
+                conn = sqlite3.connect("academia.db")
+                c = conn.cursor()
+                user_id = st.session_state.user_info['id']
+                nota_str = f"{correctas_calc}.0/5.0"
+                c.execute("INSERT INTO notas (usuario_id, tipo, titulo, nota, fecha) VALUES (?, ?, ?, ?, ?)",
+                          (user_id, "Curso", curso['nombre'], nota_str, str(date.today())))
+                conn.commit()
+                conn.close()
+                st.toast(f"💾 Nota guardada: {nota_str}")
+            except Exception as e:
+                st.error(f"Error guardando nota: {e}")
+            # ---------------------------------------
         
         # Mostrar resultados si submitted
         if st.session_state.get(f"submitted_{curso['nombre']}", False):
@@ -222,19 +244,6 @@ def mostrar_leccion(curso, nivel):
                 st.session_state[f"aprobado_{curso['nombre']}"] = True
                 st.session_state[f"nivel_{curso['nombre']}"] = nivel
                 st.session_state[f"duracion_{curso['nombre']}"] = f"{curso['clases']} horas"
-                
-                # --- GUARDAR NOTA DE CURSO EN BASE DE DATOS ---
-                try:
-                    conn = sqlite3.connect("academia.db")
-                    c = conn.cursor()
-                    # Guardar nota del curso (5.0/5.0)
-                    c.execute("INSERT INTO notas (usuario_id, tipo, titulo, nota, fecha) VALUES (?, ?, ?, ?, ?)",
-                              (st.session_state.user_info['id'], "Curso", curso['nombre'], "5.0/5.0", str(date.today())))
-                    conn.commit()
-                    conn.close()
-                except Exception as e:
-                    st.error(f"Error guardando progreso: {e}")
-                
                 if st.button("Terminar Intento", key=f"terminar_{curso['nombre']}"):
                     st.session_state[f"completado_{curso['nombre']}"] = True
                     st.rerun()
@@ -255,9 +264,6 @@ def mostrar_leccion(curso, nivel):
 # Estilos personalizados
 st.markdown("""
     <style>
-    * {
-        font-family: 'Arial', sans-serif !important;
-    }
     .titulo {
         text-align: center;
         font-size: 36px;
@@ -290,21 +296,6 @@ st.markdown("""
         font-size: 14px;
         color: #555;
         margin-top: 5px;
-    }
-    </style>
-    <style>
-    .footer {
-        position: fixed;
-        left: 0;
-        bottom: 0;
-        width: 100%;
-        background-color: #f1f1f1;
-        color: black;
-        text-align: center;
-        padding: 10px;
-        font-size: 14px;
-        z-index: 100;
-        border-top: 2px solid #E67E22;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -341,10 +332,3 @@ for nivel, lista in cursos.items():
             if st.button(f"Empezar {curso['nombre']}", key=curso['nombre']):
                 registrar_proceso(f"Empezó el curso: {curso['nombre']}")
                 mostrar_leccion(curso, nivel)
-
-# Footer Global
-st.markdown("""
-<div class="footer">
-    <p>🦋 SayUniverse | Desarrollada por <b>Sharon Asprilla</b></p>
-</div>
-""", unsafe_allow_html=True)

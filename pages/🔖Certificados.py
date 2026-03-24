@@ -120,8 +120,32 @@ st.title("🎓 Certificados de Cursos")
 
 st.markdown("""
     <style>
+    @keyframes gradient-animation {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    .stApp {
+        background: linear-gradient(-45deg, #FFFFFF, #FFEDD5, #E67E22, #FFF7E6);
+        background-size: 400% 400%;
+        animation: gradient-animation 15s ease infinite;
+    }
+    /* Texto negro global */
+    body, .stMarkdown, .stButton, .stTextInput, p, h1, h2, h3, h4, h5, h6, span, div, label {
+        color: black !important;
+    }
     [data-testid="stSidebar"] {
         background-color: #E67E22;
+    }
+    /* Botón de navegación (Sidebar toggle) ROJO Y GRANDE */
+    [data-testid="collapsedControl"] {
+        transform: scale(1.5) !important;
+        background-color: #FF0000 !important;
+        color: white !important;
+        border-radius: 50%;
+        border: 2px solid white;
+        margin-left: 10px;
+        margin-top: 5px;
     }
     /* Fuente Arial Global */
     * {
@@ -132,7 +156,7 @@ st.markdown("""
         left: 0;
         bottom: 0;
         width: 100%;
-        background-color: #f1f1f1;
+        background: #FFFFFF;
         color: black;
         text-align: center;
         padding: 10px;
@@ -151,7 +175,7 @@ if st.session_state.get('logged_in'):
         c = conn.cursor()
         user_id = st.session_state.user_info['id']
         # Buscar cursos completados en la BD
-        c.execute("SELECT titulo FROM notas WHERE usuario_id = ? AND tipo = 'Curso'", (user_id,))
+        c.execute("SELECT titulo FROM notas WHERE usuario_id = ? AND tipo = 'Curso' AND nota = '5.0/5.0'", (user_id,))
         db_aprobados = [row[0] for row in c.fetchall()]
         conn.close()
         
