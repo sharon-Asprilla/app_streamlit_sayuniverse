@@ -18,6 +18,10 @@ st.markdown("<h1 style='text-align: center;'>🦋sayuniverse🦋</h1>", unsafe_a
 
 st.title("Cursos")
 
+ando# Inicializar estado de navegación de cursos si no existe
+if "curso_activo" not in st.session_state:
+    st.session_state.curso_activo = None
+
 
 
     
@@ -309,5 +313,3 @@ for nivel, lista in cursos.items():
             if st.button(f"Empezar {curso['nombre']}", key=curso['nombre']):
                 registrar_proceso(f"Empezó el curso: {curso['nombre']}")
                 mostrar_leccion(curso, nivel)
-
-

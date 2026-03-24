@@ -1,7 +1,11 @@
-
-
 import streamlit as st
 from datetime import date
+
+# --- Authentication Check ---
+if not st.session_state.get("logged_in", False):
+    st.error("Por favor, inicia sesión para acceder a esta página.")
+    st.page_link("app.py", label="Ir a la página de inicio de sesión")
+    st.stop()
 
 # Importar función de SMS desde alerts.py
 try:
@@ -9,14 +13,6 @@ try:
     SMS_DISPONIBLE = True
 except:
     SMS_DISPONIBLE = False
-
-# Inicializar historial en sesión
-if "historial" not in st.session_state:
-    st.session_state.historial = []
-
-# Función para registrar procesos en historial
-def registrar_proceso(mensaje):
-    st.session_state.historial.append(f"{mensaje} ({date.today().strftime('%d/%m/%Y')})")
 
 # Protección contra copias y capturas de pantalla
 st.markdown("""
@@ -76,25 +72,6 @@ st.markdown("""
     });
 </script>
 """, unsafe_allow_html=True)
-
-
-
-
-import streamlit as st
-from datetime import date
-
-# Inicializar historial en sesión
-if "historial" not in st.session_state:
-    st.session_state.historial = []
-
-# Función para registrar procesos en historial
-def registrar_proceso(mensaje):
-    st.session_state.historial.append(f"{mensaje} ({date.today().strftime('%d/%m/%Y')})")
-
-
-
-import streamlit as st
-from datetime import date
 
 # Inicializar historial en sesión
 if "historial" not in st.session_state:

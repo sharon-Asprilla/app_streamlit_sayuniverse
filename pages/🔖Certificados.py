@@ -1,6 +1,12 @@
 import streamlit as st
 from datetime import date
 
+# --- Authentication Check ---
+if not st.session_state.get("logged_in", False):
+    st.error("Por favor, inicia sesión para acceder a esta página.")
+    st.page_link("app.py", label="Ir a la página de inicio de sesión")
+    st.stop()
+
 # Inicializar certificados en la sesión
 if "certificados" not in st.session_state:
     st.session_state.certificados = {}
@@ -13,25 +19,43 @@ if "historial" not in st.session_state:
 def registrar_proceso(mensaje):
     st.session_state.historial.append(f"{mensaje} ({date.today().strftime('%d/%m/%Y')})")
 
-# Simulación de cursos terminados
-cursos_terminados = [
+# Lista completa de cursos posibles (debe coincidir con cursos.py)
+cursos_disponibles = [
     {"nombre": "Inglés Básico 1", "clases": 10},
+    {"nombre": "Inglés Básico 2", "clases": 12},
+    {"nombre": "Inglés Básico 3", "clases": 15},
+    {"nombre": "Inglés Intermedio 1", "clases": 14},
     {"nombre": "Inglés Intermedio 2", "clases": 16},
+    {"nombre": "Inglés Intermedio 3", "clases": 18},
+    {"nombre": "Inglés Avanzado 1", "clases": 20},
+    {"nombre": "Inglés Avanzado 2", "clases": 22},
+    {"nombre": "Inglés Avanzado 3", "clases": 25},
 ]
 
 st.title("🎓 Certificados de Cursos")
 
+st.markdown("""
+    <style>
+    [data-testid="stSidebar"] {
+        background-color: #E67E22;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 # Verificar usuario y pruebas completadas
-if not st.session_state.get('usuario'):
-    st.warning("Debes iniciar sesión para obtener el certificado.")
+if not st.session_state.get('logged_in'):
+    st.warning("Debes iniciar sesión para ver tus certificados.")
 else:
     certificado_generado = False
-    for curso in cursos_terminados:
+    nombre_alumno = st.session_state.get('usuario', 'Estudiante')
+    
+    for curso in cursos_disponibles:
         key_aprobado = f"aprobado_{curso['nombre']}"
+        
+        # Verificar si el curso fue aprobado y completado en la sesión
         if st.session_state.get(key_aprobado) and st.session_state.get(f"completado_{curso['nombre']}"):
             nivel = st.session_state.get(f"nivel_{curso['nombre']}", "Desconocido")
             duracion = st.session_state.get(f"duracion_{curso['nombre']}", f"{curso['clases']} horas")
-            nombre_alumno = st.session_state.get('usuario')
             certificado_generado = True
             
             certificado_html = f"""
@@ -71,42 +95,7 @@ else:
             )
 
     if not certificado_generado:
-        st.error("No has completado el curso requerido para recibir certificado. Presenta y completa la prueba primero.")
-        
-        # Crear contenido del certificado
-        certificado_texto = f"""
-        CERTIFICADO DE FINALIZACIÓN
-
-        SayUniverse
-
-        Se otorga a
-
-        {st.session_state.get('usuario','Estudiante')}
-        Por haber completado satisfactoriamente el curso
-        {curso['nombre']}
-        nivel de certificación
-        {st.session_state.get(f"nivel_{curso['nombre']}", 'Desconocido')}
-        Número de clases: {curso['clases']}
-        Duración estimada: {curso['clases']} horas
-        Fecha: {date.today().strftime('%d/%m/%Y')}"""
-
-        # Guardar en sesión
-        st.session_state.certificados[curso["nombre"]] = certificado_texto
-
-        # Mostrar certificado con colores
-        st.success("¡Certificado generado!")
-        registrar_proceso(f"Certificado generado para: {curso['nombre']}")
-        st.markdown(f"<div style='background-color:black; color:white; padding:30px; border-radius:10px; font-family:monospace;'>{certificado_texto}</div>", unsafe_allow_html=True)
-
-
-        # Botón de descarga
-        st.download_button(
-
-            label="⬇️ Descargar certificado",
-            data=certificado_texto,
-            file_name=f"certificado_{curso['nombre'].replace(' ','_')}.txt",
-            mime="text/plain"
-        )
+        st.info("No tienes certificados disponibles aún. Completa y aprueba un curso (5/5 respuestas correctas) para obtener tu certificado.")
 
 # Mostrar certificados guardados en sesión
 st.markdown("---")
